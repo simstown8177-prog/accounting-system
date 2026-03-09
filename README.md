@@ -2,6 +2,11 @@
 
 은행에서 내려받은 거래내역 CSV/TSV 파일을 그대로 넣으면 자동으로 읽어서 사용자별 장부에 누적 저장하고, 월 정산에 필요한 가계부형 요약 데이터를 생성하는 회계시스템입니다.
 
+현재 저장소는 두 층으로 구성됩니다.
+
+- Python 장부 엔진: 원본 거래 정규화, 누적 저장, 보고서 생성
+- Next.js 웹 UI: Vercel 배포용 대시보드 골격
+
 ## 지원 기능
 
 - 은행별로 다른 컬럼명을 자동 추정해 거래일, 적요, 입금/출금, 잔액, 계좌명을 표준화
@@ -14,6 +19,7 @@
 
 ## 프로젝트 구조
 
+- `app/`: Vercel 배포용 Next.js UI
 - `accounting_system/parser.py`: 원본 은행 파일 해석
 - `accounting_system/categorization.py`: 가계부 카테고리 자동 분류
 - `accounting_system/storage.py`: 사용자/거래 누적 저장
@@ -21,6 +27,24 @@
 - `accounting_system/cli.py`: 실행 진입점
 - `templates/standard_ledger_upload.csv`: 표준 업로드 양식
 - `docs/upload-template.md`: 컬럼/입력 규칙 문서
+
+## Vercel 배포
+
+웹 구조는 Next.js 기준으로 추가되어 있습니다.
+
+```bash
+npm install
+npm run build
+```
+
+Vercel에서는 루트 디렉터리를 그대로 연결하면 됩니다.
+
+현재 UI 화면은 다음 목적의 골격입니다.
+
+- 표준 양식 업로드
+- 월 정산 요약
+- 카드/할부/이자 분리 표시
+- 거래 검토와 미분류 큐 확인
 
 ## 실행 방법
 
