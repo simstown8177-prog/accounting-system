@@ -193,8 +193,8 @@ export default function DashboardClient() {
       ]
     : emptySummary;
 
-  const overviewIndicators = useMemo(
-    () => buildOverviewIndicators(uploadState.preview),
+  const overviewStatus = useMemo(
+    () => buildOverviewStatus(uploadState.preview),
     [uploadState.preview]
   );
 
@@ -272,19 +272,26 @@ export default function DashboardClient() {
                 </div>
                 <span className={`status-pill ${uploadState.status}`}>{uploadState.status}</span>
               </div>
-              <div className="indicator-grid">
-                {overviewIndicators.map((item) => (
-                  <article className="indicator-card" key={item.label}>
-                    <div
-                      className={`indicator-ring ${item.tone}`}
-                      style={{ "--indicator-fill": `${item.score}%` }}
-                    >
-                      <span>{item.score}</span>
-                    </div>
-                    <strong>{item.label}</strong>
-                    <span>{item.state}</span>
-                  </article>
-                ))}
+              <div className="overview-unified">
+                <div className="overview-gauge-shell">
+                  <div
+                    className={`overview-gauge ${overviewStatus.tone}`}
+                    style={{ "--indicator-fill": `${overviewStatus.score}%` }}
+                  >
+                    <span>{overviewStatus.score}</span>
+                  </div>
+                </div>
+                <div className="overview-summary">
+                  <strong>{overviewStatus.title}</strong>
+                  <p>{overviewStatus.description}</p>
+                  <div className="overview-tags">
+                    {overviewStatus.factors.map((factor) => (
+                      <span className={`overview-tag ${factor.tone}`} key={factor.label}>
+                        {factor.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
               <p className="panel-note">{uploadState.message}</p>
             </article>
@@ -691,15 +698,19 @@ export default function DashboardClient() {
   );
 }
 
-function buildOverviewIndicators(preview) {
+function buildOverviewStatus(preview) {
   if (!preview) {
-    return [
-      { label: "안전", score: 62, state: "대기", tone: "positive" },
-      { label: "준수", score: 58, state: "대기", tone: "accent" },
-      { label: "위험", score: 41, state: "미확인", tone: "warning" },
-      { label: "현금흐름", score: 55, state: "대기", tone: "accent" },
-      { label: "분류정확도", score: 48, state: "미확인", tone: "default" },
-    ];
+    return {
+      score: 58,
+      tone: "accent",
+      title: "업로드 대기",
+      description: "파일이 아직 없어 전체 상황을 판정하지 않았습니다. 업로드 후 위험 항목과 현금흐름을 종합 점수로 보여줍니다.",
+      factors: [
+        { label: "안전 대기", tone: "positive" },
+        { label: "준수 대기", tone: "accent" },
+        { label: "위험 미확인", tone: "warning" },
+      ],
+    };
   }
 
   const reviewCount = preview.reviewQueue.reduce((sum, item) => sum + item.count, 0);
@@ -707,39 +718,32 @@ function buildOverviewIndicators(preview) {
   const missingOrigin = findIssueCount(preview.reviewQueue, "원거래 연결 누락");
   const missingType = findIssueCount(preview.reviewQueue, "거래구분 누락");
   const netIsPositive = preview.totals.net.startsWith("+");
+  const score = clampScore(
+    82
+      - reviewCount * 4
+      - (missingType + missingOrigin) * 5
+      - uncategorized * 3
+      + (netIsPositive ? 6 : -10)
+  );
+  const tone = score >= 72 ? "positive" : score >= 50 ? "accent" : "warning";
+  const title = score >= 72 ? "전체적으로 안정적" : score >= 50 ? "관리 필요" : "즉시 점검 필요";
+  const description = [
+    `검토 필요 ${reviewCount}건`,
+    netIsPositive ? "순현금흐름은 유입 우세" : "순현금흐름은 유출 우세",
+    uncategorized > 0 ? `미분류 ${uncategorized}건 존재` : "분류 상태는 비교적 양호",
+  ].join(" · ");
 
-  return [
-    {
-      label: "안전",
-      score: clampScore(88 - reviewCount * 4),
-      state: reviewCount > 6 ? "주의" : "안정",
-      tone: "positive",
-    },
-    {
-      label: "준수",
-      score: clampScore(84 - (missingType + missingOrigin) * 7),
-      state: missingType + missingOrigin > 0 ? "보완 필요" : "준수",
-      tone: "accent",
-    },
-    {
-      label: "위험",
-      score: clampScore(24 + reviewCount * 6),
-      state: reviewCount > 5 ? "높음" : "관리 가능",
-      tone: "warning",
-    },
-    {
-      label: "현금흐름",
-      score: netIsPositive ? 78 : 39,
-      state: netIsPositive ? "유입 우세" : "유출 우세",
-      tone: netIsPositive ? "positive" : "warning",
-    },
-    {
-      label: "분류정확도",
-      score: clampScore(90 - uncategorized * 8),
-      state: uncategorized > 0 ? "정리 필요" : "양호",
-      tone: uncategorized > 0 ? "warning" : "accent",
-    },
-  ];
+  return {
+    score,
+    tone,
+    title,
+    description,
+    factors: [
+      { label: reviewCount > 5 ? "위험 높음" : "위험 관리", tone: "warning" },
+      { label: missingType + missingOrigin > 0 ? "준수 보완 필요" : "준수 양호", tone: "accent" },
+      { label: netIsPositive ? "현금흐름 안정" : "현금유출 주의", tone: netIsPositive ? "positive" : "warning" },
+    ],
+  };
 }
 
 function buildDashboardHighlights(preview) {
