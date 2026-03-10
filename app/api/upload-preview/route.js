@@ -1,12 +1,4 @@
-const REQUIRED_HEADERS = [
-  "거래일자",
-  "거래구분",
-  "결제수단",
-  "계좌/카드명",
-  "적요",
-  "수입금액",
-  "지출금액",
-];
+import { analyzeLedgerRows, REQUIRED_HEADERS } from "../../lib/ledger-preview";
 
 export async function POST(request) {
   const formData = await request.formData();
@@ -45,32 +37,13 @@ export async function POST(request) {
     return item;
   });
 
-  const totals = objects.reduce(
-    (accumulator, row) => {
-      accumulator.income += toNumber(row["수입금액"]);
-      accumulator.expense += toNumber(row["지출금액"]);
-      accumulator.fees += toNumber(row["이자/수수료"]);
-      return accumulator;
-    },
-    { income: 0, expense: 0, fees: 0 }
-  );
+  const analysis = analyzeLedgerRows(objects);
 
   return Response.json({
     fileName: file.name,
     rowCount: objects.length,
     headers,
-    totals: {
-      income: formatCurrency(totals.income),
-      expense: formatCurrency(totals.expense),
-      fees: formatCurrency(totals.fees),
-    },
-    previewRows: objects.slice(0, 5).map((row) => ({
-      거래일자: row["거래일자"],
-      거래구분: row["거래구분"],
-      적요: row["적요"],
-      수입금액: row["수입금액"],
-      지출금액: row["지출금액"],
-    })),
+    ...analysis,
   });
 }
 
@@ -114,17 +87,4 @@ function splitLine(line, delimiter) {
 
   result.push(current);
   return result;
-}
-
-function toNumber(value) {
-  if (!value) {
-    return 0;
-  }
-  const normalized = value.replaceAll(",", "").trim();
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function formatCurrency(value) {
-  return `${new Intl.NumberFormat("ko-KR").format(value)}원`;
 }

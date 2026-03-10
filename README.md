@@ -50,6 +50,28 @@ Vercel에서는 루트 디렉터리를 그대로 연결하면 됩니다.
 
 - `GET /api/template`: 표준 업로드 CSV 양식 다운로드
 - `POST /api/upload-preview`: 업로드 파일 헤더 검증과 거래 미리보기 반환
+- `POST /api/accounting-ai`: 업로드 요약 데이터를 외부 AI 모델에 전달해 회계/가계부 분석 답변 반환
+
+## AI 배포 설정
+
+로컬 더미 응답이 아니라 실제 AI를 쓰려면 서버 환경변수가 필요합니다.
+
+```bash
+OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-4.1-mini
+OPENAI_BASE_URL=https://api.openai.com/v1
+```
+
+또는 공급자 분리용 별칭으로 아래 이름을 써도 됩니다.
+
+```bash
+ACCOUNTING_AI_API_KEY=...
+ACCOUNTING_AI_MODEL=gpt-4.1-mini
+ACCOUNTING_AI_BASE_URL=https://api.openai.com/v1
+```
+
+Vercel 배포 시에는 Project Settings > Environment Variables에 같은 값을 넣어야 합니다.
+이 구성이 없으면 `POST /api/accounting-ai`는 503을 반환합니다.
 
 ## 실행 방법
 
